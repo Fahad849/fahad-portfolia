@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Text → PDF Converter</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ink: #1a1208;
+      --parchment: #faf6ef;
+      --cream: #f2ead8;
+      --gold: #b8860b;
+      --gold-light: #d4a017;
+      --rust: #8b3a0f;
+      --shadow: rgba(26,18,8,0.15);
+    }
+
+    body {
+      background-color: var(--parchment);
+      background-image:
+        radial-gradient(ellipse at 20% 10%, rgba(184,134,11,0.06) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 90%, rgba(139,58,15,0.05) 0%, transparent 60%);
+      min-height: 100vh;
+      font-family: 'EB Garamond', Georgia, serif;
+      color: var(--ink);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px 80px;
+    }
+
+    /* Grain overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrap { position: relative; z-index: 1; width: 100%; max-width: 780px; }
+
+    /* ── Header ── */
+    header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    .eyebrow {
+      font-family: 'EB Garamond', serif;
+      font-size: 11px;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 14px;
+    }
+
+    h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(36px, 6vw, 58px);
+      font-weight: 700;
+      line-height: 1.1;
+      color: var(--ink);
+    }
+
+    h1 span {
+      color: var(--gold);
+      font-style: italic;
+    }
+
+    .subtitle {
+      margin-top: 14px;
+      font-size: 17px;
+      color: #6b5a3e;
+      font-style: italic;
+    }
+
+    .rule {
+      width: 80px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+      margin: 22px auto 0;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: #fff;
+      border: 1px solid rgba(184,134,11,0.2);
+      border-radius: 4px;
+      padding: 36px 40px;
+      box-shadow: 0 4px 32px var(--shadow), 0 1px 0 rgba(255,255,255,0.8) inset;
+    }
+
+    /* ── Controls row ── */
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 24px;
+      align-items: flex-end;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+      min-width: 140px;
+    }
+
+    label {
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--gold);
+      font-family: 'EB Garamond', serif;
+    }
+
+    input[type="text"], select {
+      font-family: 'EB Garamond', serif;
+      font-size: 15px;
+      color: var(--ink);
+      background: var(--parchment);
+      border: 1px solid rgba(184,134,11,0.25);
+      border-radius: 3px;
+      padding: 9px 13px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input[type="text"]:focus, select:focus {
+      border-color: var(--gold);
+      background: #fff;
+    }
+
+    .size-row {
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+    }
+
+    .size-row .field { min-width: 80px; }
+
+    /* ── Textarea ── */
+    .textarea-wrap {
+      position: relative;
+      margin-bottom: 8px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 320px;
+      font-family: 'EB Garamond', serif;
+      font-size: 16px;
+      line-height: 1.7;
+      color: var(--ink);
+      background: var(--parchment);
+      border: 1px solid rgba(184,134,11,0.25);
+      border-radius: 3px;
+      padding: 20px;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    textarea:focus {
+      border-color: var(--gold);
+      background: #fff;
+    }
+
+    textarea::placeholder { color: #b0a080; font-style: italic; }
+
+    .char-count {
+      text-align: right;
+      font-size: 12px;
+      color: #a08060;
+      margin-top: 6px;
+      margin-bottom: 20px;
+    }
+
+    /* ── Buttons ── */
+    .btn-row {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      font-family: 'Playfair Display', serif;
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      padding: 13px 30px;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--gold), #c9930d);
+      color: #fff;
+      box-shadow: 0 2px 12px rgba(184,134,11,0.35);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 20px rgba(184,134,11,0.5);
+    }
+
+    .btn-primary:active { transform: translateY(0); }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--gold);
+      border: 1px solid rgba(184,134,11,0.4);
+    }
+
+    .btn-ghost:hover { background: rgba(184,134,11,0.06); }
+
+    /* ── Download box ── */
+    #download-box {
+      display: none;
+      margin-top: 28px;
+      background: linear-gradient(135deg, #fffbf2, #faf4e4);
+      border: 1px solid rgba(184,134,11,0.3);
+      border-left: 4px solid var(--gold);
+      border-radius: 3px;
+      padding: 20px 24px;
+      animation: slideIn 0.35s ease;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .dl-label {
+      font-size: 11px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 12px;
+    }
+
+    #download-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--ink);
+      color: #fff;
+      font-family: 'Playfair Display', serif;
+      font-size: 16px;
+      font-weight: 600;
+      padding: 12px 26px;
+      border-radius: 3px;
+      text-decoration: none;
+      transition: all 0.2s;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+
+    #download-link:hover {
+      background: #2e2010;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    }
+
+    .dl-note {
+      margin-top: 10px;
+      font-size: 13px;
+      font-style: italic;
+      color: #8b7355;
+    }
+
+    /* ── Footer ── */
+    footer {
+      margin-top: 48px;
+      text-align: center;
+      font-size: 13px;
+      color: #b0a080;
+      font-style: italic;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 560px) {
+      .card { padding: 24px 20px; }
+      .controls { flex-direction: column; }
+      .btn { width: 100%; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+
+    <header>
+      <p class="eyebrow">✦ Precision Document Tool ✦</p>
+      <h1>Text to <span>PDF</span></h1>
+      <p class="subtitle">Paste your words. Download a polished document.</p>
+      <div class="rule"></div>
+    </header>
+
+    <div class="card">
+
+      <!-- Controls -->
+      <div class="controls">
+        <div class="field" style="flex:2; min-width:200px;">
+          <label>Document Title</label>
+          <input type="text" id="doc-title" placeholder="My Document" />
+        </div>
+        <div class="field">
+          <label>Font Size</label>
+          <input type="text" id="font-size" value="12" placeholder="12" style="max-width:90px;" />
+        </div>
+        <div class="field">
+          <label>Line Spacing</label>
+          <select id="line-spacing">
+            <option value="1.2">Single</option>
+            <option value="1.5" selected>1.5×</option>
+            <option value="2.0">Double</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Textarea -->
+      <div class="textarea-wrap">
+        <textarea id="raw-text" placeholder="Paste or type your content here…&#10;&#10;The document will be set in Times New Roman on A4 paper, ready to download."></textarea>
+      </div>
+      <div class="char-count"><span id="char-num">0</span> characters</div>
+
+      <!-- Buttons -->
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="generatePDF()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+          Generate PDF
+        </button>
+        <button class="btn btn-ghost" onclick="clearAll()">Clear</button>
+      </div>
+
+      <!-- Download box -->
+      <div id="download-box">
+        <p class="dl-label">✦ Your PDF is ready</p>
+        <a id="download-link" href="#" download>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download PDF
+        </a>
+        <p class="dl-note">Tap the button above — the PDF will save directly to your device.</p>
+      </div>
+
+    </div>
+
+    <footer>A4 · Times New Roman · Client-side · No data leaves your device</footer>
+
+  </div>
+
+  <script>
+    const textarea = document.getElementById('raw-text');
+    textarea.addEventListener('input', () => {
+      document.getElementById('char-num').textContent = textarea.value.length.toLocaleString();
+    });
+
+    function clearAll() {
+      textarea.value = '';
+      document.getElementById('char-num').textContent = '0';
+      document.getElementById('doc-title').value = '';
+      document.getElementById('download-box').style.display = 'none';
+    }
+
+    function generatePDF() {
+      try {
+        const text = textarea.value.trim();
+        if (!text) { alert('Please enter some text first.'); return; }
+
+        const { jsPDF } = window.jspdf;
+        if (!jsPDF) { alert('PDF library not loaded yet. Please wait a moment and try again.'); return; }
+
+        // A4 dimensions in mm: 210 × 297
+        const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+
+        const marginLeft   = 25;
+        const marginRight  = 25;
+        const marginTop    = 25;
+        const marginBottom = 25;
+        const pageH   = 297;
+        const usableW = 210 - marginLeft - marginRight; // 160mm
+
+        const fontSize    = Math.max(8, Math.min(72, parseFloat(document.getElementById('font-size').value) || 12));
+        const lineSpacing = parseFloat(document.getElementById('line-spacing').value) || 1.5;
+
+        // Correct pt→mm: 1pt = 25.4/72 mm. Add jsPDF's 1.15 internal line factor.
+        const ptToMm     = 25.4 / 72;
+        const lineHeight  = fontSize * ptToMm * 1.15 * lineSpacing;
+
+        doc.setFont('times', 'normal');
+        doc.setFontSize(fontSize);
+
+        const title = document.getElementById('doc-title').value.trim();
+        const fname = (title || 'document').replace(/[^a-z0-9_\-]/gi, '_') + '.pdf';
+        let cursorY = marginTop;
+
+        // Render title
+        if (title) {
+          const titleSize = fontSize + 4;
+          const titleLH   = titleSize * ptToMm * 1.15 * 1.3;
+          doc.setFont('times', 'bold');
+          doc.setFontSize(titleSize);
+          const titleLines = doc.splitTextToSize(title, usableW);
+          titleLines.forEach(line => {
+            if (cursorY + titleLH > pageH - marginBottom) { doc.addPage(); cursorY = marginTop; }
+            doc.text(line, marginLeft, cursorY);
+            cursorY += titleLH;
+          });
+          cursorY += 4; // gap after title
+          doc.setFont('times', 'normal');
+          doc.setFontSize(fontSize);
+        }
+
+        // Render body — split on newlines, wrap each paragraph
+        const paragraphs = text.split('\n');
+
+        for (const para of paragraphs) {
+          if (para.trim() === '') {
+            // Blank line = paragraph gap (check page boundary too)
+            if (cursorY + lineHeight * 0.8 > pageH - marginBottom) {
+              doc.addPage(); cursorY = marginTop;
+            } else {
+              cursorY += lineHeight * 0.8;
+            }
+            continue;
+          }
+
+          const wrappedLines = doc.splitTextToSize(para, usableW);
+          for (const line of wrappedLines) {
+            if (cursorY + lineHeight > pageH - marginBottom) {
+              doc.addPage();
+              cursorY = marginTop;
+            }
+            doc.text(line, marginLeft, cursorY);
+            cursorY += lineHeight;
+          }
+        }
+
+        // Save directly — most reliable method across desktop & mobile
+        doc.save(fname);
+
+        // Also set up the visible download link as a fallback
+        const blob = doc.output('blob');
+        const url  = URL.createObjectURL(blob);
+        const dlLink = document.getElementById('download-link');
+        dlLink.href     = url;
+        dlLink.download = fname;
+
+        const box = document.getElementById('download-box');
+        box.style.display = 'block';
+        box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+      } catch (err) {
+        console.error(err);
+        alert('Something went wrong generating the PDF: ' + err.message);
+      }
+    }
+  </script>
+</body>
+</html>
