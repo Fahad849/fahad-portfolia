@@ -1,0 +1,132 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    font-family:'Poppins',sans-serif;
+    background:linear-gradient(135deg,#0f0f0f,#1b1b2f,#16213e);
+    color:white;
+    min-height:100vh;
+    overflow-x:hidden;
+}
+
+.container{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    flex-direction:column;
+    height:100vh;
+    text-align:center;
+    padding:20px;
+}
+
+.glow{
+    position:absolute;
+    width:400px;
+    height:400px;
+    background:#00adb5;
+    filter:blur(150px);
+    opacity:0.25;
+    top:-100px;
+    right:-100px;
+    z-index:-1;
+}
+
+h1{
+    font-size:5rem;
+    font-weight:700;
+    letter-spacing:2px;
+    margin-bottom:20px;
+    background:linear-gradient(to right,#00adb5,#00fff5);
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+}
+
+p{
+    font-size:1.4rem;
+    color:#d1d1d1;
+    max-width:700px;
+    line-height:1.8;
+    margin-bottom:35px;
+}
+
+.buttons{
+    display:flex;
+    gap:20px;
+    flex-wrap:wrap;
+    justify-content:center;
+}
+
+.btn{
+    padding:15px 35px;
+    border-radius:50px;
+    text-decoration:none;
+    font-size:1rem;
+    font-weight:600;
+    transition:0.4s ease;
+    cursor:pointer;
+}
+
+.primary{
+    background:#00adb5;
+    color:white;
+    box-shadow:0 0 25px rgba(0,173,181,0.5);
+}
+
+.primary:hover{
+    transform:translateY(-5px) scale(1.05);
+    box-shadow:0 0 40px rgba(0,173,181,0.9);
+}
+
+.secondary{
+    border:2px solid #00adb5;
+    color:#00adb5;
+}
+
+.secondary:hover{
+    background:#00adb5;
+    color:white;
+    transform:translateY(-5px);
+}
+
+.socials{
+    margin-top:50px;
+    display:flex;
+    gap:20px;
+}
+
+.socials a{
+    color:white;
+    font-size:1.5rem;
+    transition:0.3s;
+}
+
+.socials a:hover{
+    color:#00adb5;
+    transform:scale(1.2);
+}
+
+@media(max-width:768px){
+
+    h1{
+        font-size:3rem;
+    }
+
+    p{
+        font-size:1rem;
+    }
+
+    .btn{
+        width:100%;
+        text-align:center;
+    }
+
+    .buttons{
+        flex-direction:column;
+        width:100%;
+    }
+}
